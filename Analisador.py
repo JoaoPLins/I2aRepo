@@ -9,9 +9,13 @@ from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLabel,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor, QPalette, QKeySequence
 from langchain_google_genai import GoogleGenerativeAI
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
+#from langchain.agents import create_tool_calling_agent
+#from langchain.agents import AgentExecutor
 from langchain.chains import LLMChain
 import os
+from pydantic import BaseModel
 from dotenv import load_dotenv
 import warnings
 
@@ -130,6 +134,15 @@ class DataLoader:
 
         return columns_description + stats_summary
 
+class ToolResponse(BaseModel):
+    topic: str
+    summary: str
+    sources: list[str]
+    tools_used: list[str]
+    analysis: str
+
+parser = PydanticOutputParser(pydantic_object=ToolResponse)
+
 class GeminiIntegration:
     def __init__(self):
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -152,6 +165,7 @@ class GeminiIntegration:
             3. Ao mencionar valores monetários, formate como R$ 1.234,56
             4. Para operações interestaduais, considere o CFOP e UF de origem/destino
             5. Para produtos, utilize a descrição e NCM quando relevante
+            6. wrap the output and provide no other text\n {format_instructions}
             
             Pergunta: {question}
             
@@ -161,7 +175,8 @@ class GeminiIntegration:
             3. Resultados encontrados
             4. Observações relevantes
             """
-        )
+        ).partial(format_instructions=parser.get_format_instructions())
+        
         
         self.chain = LLMChain(llm=self.llm, prompt=self.prompt_template)
         
