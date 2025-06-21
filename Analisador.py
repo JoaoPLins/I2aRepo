@@ -1,6 +1,9 @@
 import sys
 import zipfile
 import pandas as pd
+import json
+import re
+
 from typing import Callable
 from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLabel, 
                             QLineEdit, QPushButton, QTextEdit, QFileDialog,
@@ -183,7 +186,13 @@ class GeminiIntegration:
     def ask_question(self, question: str, data_summary: str) -> str:
         # Método atualizado para usar invoke() em vez de run()
         response = self.chain.invoke({"question": question, "data_summary": data_summary})
-        return response['text']
+        print(response)
+        raw_output = response.get('text', '')
+        print(raw_output)
+        clean_json_str = re.sub(r"^```json|```$", "", raw_output.strip(), flags=re.MULTILINE).strip()
+        response_dict = json.loads(clean_json_str)
+        print(response_dict)
+        return response_dict.get('analysis', 'analize nao realizada')
 
 class MainWindow(QMainWindow):
     def __init__(self):
